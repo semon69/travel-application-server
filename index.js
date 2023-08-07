@@ -35,11 +35,13 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
 
+        // Show all user
         app.get('/users', async (req, res) => {
             const users = await userCollection.find().toArray()
             res.send(users)
         })
 
+        // Collect all user when they register
         app.post('/users', async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
@@ -52,6 +54,8 @@ async function run() {
             res.send(result)
         })
 
+
+        // Show all communities, anyone can find his/her created community using query
         app.get('/communities', async (req, res) => {
             let query = {}
             if (req.query?.owner) {
@@ -61,6 +65,7 @@ async function run() {
             res.send(result)
         })
 
+        // show all user that lies in a definite community, the value will change when parameter change
         app.get('/communities/:communityId', async (req, res) => {
             const id = req.params.communityId
             const filter = { _id: new ObjectId(id) }
@@ -68,31 +73,33 @@ async function run() {
 
             const member = singleCommunity.member
             const emails = member.map(obj => obj.email)
-            console.log(emails);
-            const result = await userCollection.find({ email: { $in: emails.map(email => email)} }).toArray()
-            // console.log(result);
+        
+            const result = await userCollection.find({ email: { $in: emails.map(email => email) } }).toArray()
+            
             res.send(result)
         })
 
+        // show a random community's all post, it will change in every refresh
         app.get('/posts', async (req, res) => {
-        
+
             const allcategories = await communityCollection.find({}, { projection: { _id: 1, name: 1 } }).toArray()
             const selectedCommunity = await allcategories[Math.floor(Math.random() * allcategories.length)]
             const comIdString = selectedCommunity._id
             const str = comIdString.toString()
             const communityPosts = await postCollection.find({ communityId: str }).toArray()
             const result = [{ title: selectedCommunity?.name, posts: communityPosts }]
-
             res.send(result)
         })
 
+        // collect all post and store in database
         app.post('/posts', async (req, res) => {
 
             const post = req.body
             const result = await postCollection.insertOne(post)
-            res.send()
+            res.send(result)
         })
 
+        // collect all communities and store in database
         app.post('/communities', async (req, res) => {
             const { name, description, owner } = req.body;
             const newCommunity = { name, description, owner, member: [] }
@@ -100,6 +107,7 @@ async function run() {
             res.send(result)
         })
 
+        // join a definite community, it would store a member email in member array in single community collection
         app.post('/communities/:communityId', async (req, res) => {
             const userEmail = req.body.owner
             const id = req.params.communityId
@@ -121,7 +129,6 @@ async function run() {
                     $push: {
                         member: {
                             email: userEmail,
-                            // other fields you want to add
                         }
                     }
                 }
